@@ -1,4 +1,6 @@
 import re
+import subprocess
+
 from openai import OpenAI
 
 def llm_merge(base, ours, theirs):
@@ -28,31 +30,27 @@ def llm_merge(base, ours, theirs):
     if main_branch_filestring == side_branch_filestring:
         return main_branch_filestring
 
-    response = client.responses.create(
-        model="o4-mini-2025-04-16",
-        input = f"""
-Assume you are an expert developer.
+    result = subprocess.run(['git','diff',main_branch,side_branch], capture_output=True, text=True)
+    llm_prompt = f"""
+Assume you are an expert developer. I have two versions of a file, from it's git commit history. version_1 is the version corresponding to the main branch that I am working on. version_2 is the version from the side branch that I want to merge on top my main branch.
 
-Here are the three versions of the same python file:
-1. version 1:
-{common_ancestor_filestring}
-
-2. version 2:
+Here is version_1 of the python file:
 {main_branch_filestring}
 
-3. version 3:
-{side_branch_filestring}
+And here is the output of git diff between version_1 and version_2 i.e. for git diff version_1 version_2:
+{result.stdout}
 
 
-These are three versions of the same file from three different commits.
-version 2 is the file version from the main branch; version 3: from a side branch; version 1: file version from the common ancestor of main branch and side branch. You have to resolve the merge conflicts.
+You have to resolve the merge conflicts, for merging version_2 on top of version_1.
 
 Please give the output in the below format:
-1. ResolvedFile.py: Merged file have the changes in version 3 on top of version 2. Empty file in case there are unresolvable conflicts.
-2. Explanation.txt: Please provide an explanation of the changes made from version 2 to version 3.
+1. ResolvedFile.py: Merged file having the changes in version_2 on top of version_1. Empty file in case there are unresolvable conflicts.
+2. Explanation.txt: Please provide an explanation of the changes made from version_1 to version_2.
 """
-    )
 
+    response = client.responses.create(
+        model="o4-mini-2025-04-16",
+        input = llm_prompt)
 
     content = response.output_text
     # Extract the Python code and explanation using regex
@@ -72,45 +70,42 @@ if __name__ == "__main__":
     client = OpenAI()
 
     base_dir="/Users/abhiag/Downloads/git_merge_llm/test_repo/pylint/pylint"
-    common_ancestor_branch = "checkers/base/comparison_checker.ancestor_3w.py"
-    # main_branch = "checkers/base/comparison_checker.main_3w.py"
-    # # side_branch = "checkers/base/comparison_checker.maintenance_3w.py"
-    # side_branch = "checkers/base/comparison_checker.maintenance_latest.py"
+    common_ancestor_branch = f"{base_dir}/checkers/base/comparison_checker.ancestor_3w.py"
+    main_branch = f"{base_dir}/checkers/base/comparison_checker.main_3w.py"
+    side_branch = f"{base_dir}/checkers/base/comparison_checker.maintenance_3w.py"
+    # side_branch = f"{base_dir}/checkers/base/comparison_checker.maintenance_latest.py"
 
-    main_branch = "checkers/base/comparison_checker.maintenance_3w.py"
-    # side_branch = "checkers/base/comparison_checker.maintenance_3w.py"
-    side_branch = "checkers/base/comparison_checker.py"
+    # main_branch = f"{base_dir}/checkers/base/comparison_checker.maintenance_3w.py"
+    # side_branch = f"{base_dir}/checkers/base/comparison_checker.maintenance_3w.py"
+    # side_branch = f"{base_dir}/checkers/base/comparison_checker.py"
 
-    with open(f"{base_dir}/{common_ancestor_branch}",'r') as f:
+    with open(common_ancestor_branch,'r') as f:
         common_ancestor_filestring = f.read()
-    with open(f"{base_dir}/{main_branch}",'r') as f:
+    with open(main_branch,'r') as f:
         main_branch_filestring = f.read()
-    with open(f"{base_dir}/{side_branch}",'r') as f:
+    with open(side_branch,'r') as f:
         side_branch_filestring = f.read()
 
+    import subprocess
+    result = subprocess.run(['git','diff',main_branch,side_branch], capture_output=True, text=True)
 
     response = client.responses.create(
         model="o4-mini-2025-04-16",
         input = f"""
-Assume you are an expert developer.
+Assume you are an expert developer. I have two versions of a file, from it's git commit history. version_1 is the version corresponding to the main branch that I am working on. version_2 is the version from the side branch that I want to merge on top my main branch.
 
-Here are the three versions of the same python file:
-1. version 1:
-{common_ancestor_filestring}
-
-2. version 2:
+Here is version_1 of the python file:
 {main_branch_filestring}
 
-3. version 3:
-{side_branch_filestring}
+And here is the output of git diff between version_1 and version_2 i.e. for git diff version_1 version_2:
+{result.stdout}
 
 
-These are three versions of the same file from three different commits.
-version 2 is the file version from the main branch; version 3: from a side branch; version 1: file version from the common ancestor of main branch and side branch. You have to resolve the merge conflicts.
+You have to resolve the merge conflicts, for merging version_2 on top of version_1.
 
 Please give the output in the below format:
-1. ResolvedFile.py: Merged file have the changes in version 3 on top of version 2. Empty file in case there are unresolvable conflicts.
-2. Explanation.txt: Please provide an explanation of the changes made from version 2 to version 3.
+1. ResolvedFile.py: Merged file having the changes in version_2 on top of version_1. Empty file in case there are unresolvable conflicts.
+2. Explanation.txt: Please provide an explanation of the changes made from version_1 to version_2.
 """
     )
 
