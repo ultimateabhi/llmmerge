@@ -1,12 +1,20 @@
 [project]
 name = "llmmerge"
-version = "0.2.0"
+version = "0.2.2"
 description = "A custom LLM-based git merge driver."
 authors = [
     { name = "Abhishek Agarwal", email = "ultimateabhi@gmail.com" }
 ]
 requires-python = ">=3.10"
+readme = "README.md"
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project.entry-points]
+console_scripts = { "llmmerge-driver" = "llmmerge.driver:main" }
+
+[tool.setuptools.packages]
+find = {}
+
